@@ -1,0 +1,5 @@
+﻿<Application x:Class="TextChat.UI.WPF.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:TextChat.UI.WPF"
+             StartupUri="Views/MainWindow.xaml"/>
