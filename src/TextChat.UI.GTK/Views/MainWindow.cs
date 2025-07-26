@@ -1,4 +1,5 @@
 using Gtk;
+using GtkApplication = Gtk.Application;
 using UIObject = Gtk.Builder.ObjectAttribute;
 
 namespace TextChat.UI.GTK.Views;
@@ -21,7 +22,7 @@ internal class MainWindow : Window
 		_button.Clicked += ButtonOnClicked;
 	}
 
-	private void WindowOnDeleteEvent(object sender, DeleteEventArgs a) => Application.Quit();
+	private void WindowOnDeleteEvent(object sender, DeleteEventArgs a) => GtkApplication.Quit();
 
 	private void ButtonOnClicked(object? sender, EventArgs a)
 	{
