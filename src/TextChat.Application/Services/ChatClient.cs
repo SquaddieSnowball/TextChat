@@ -9,12 +9,12 @@ namespace TextChat.Application.Services;
 public class ChatClient : IChatClient
 {
 	private readonly TcpClient _client = new();
-	private bool _disposed = false;
+	private bool _disposed;
 	private StreamReader? _streamReader;
 	private StreamWriter? _streamWriter;
 
-	private readonly IServerChatMessageParser _serverChatMessageParser;
-	private readonly IClientChatMessageBuilder _clientChatMessageBuilder;
+	private readonly IServerChatMessageParser _serverMessageParser;
+	private readonly IClientChatMessageBuilder _clientMessageBuilder;
 
 	public bool Connected { get; private set; }
 
@@ -29,10 +29,10 @@ public class ChatClient : IChatClient
 	public event EventHandler<Error>? ErrorReceivingMessage;
 
 	public ChatClient(
-		IServerChatMessageParser serverChatMessageParser,
-		IClientChatMessageBuilder clientChatMessageBuilder) =>
-		(_serverChatMessageParser, _clientChatMessageBuilder) =
-		(serverChatMessageParser, clientChatMessageBuilder);
+		IServerChatMessageParser serverMessageParser,
+		IClientChatMessageBuilder clientMessageBuilder) =>
+		(_serverMessageParser, _clientMessageBuilder) =
+		(serverMessageParser, clientMessageBuilder);
 
 	public async Task<Result> Connect(string ipAddress, int port)
 	{
@@ -41,9 +41,12 @@ public class ChatClient : IChatClient
 
 		try
 		{
-			ConnectionEndpoint = new(IPAddress.Parse(ipAddress), port);
+			ConnectionEndpoint = new IPEndPoint(IPAddress.Parse(ipAddress), port);
 
 			await _client.ConnectAsync(ConnectionEndpoint);
+
+			_streamReader = new StreamReader(_client.GetStream());
+			_streamWriter = new StreamWriter(_client.GetStream());
 		}
 		catch (FormatException)
 		{
@@ -58,8 +61,7 @@ public class ChatClient : IChatClient
 			return new Error("Code", "Description"); // TODO
 		}
 
-		_streamReader = new StreamReader(_client.GetStream());
-		_streamWriter = new StreamWriter(_client.GetStream());
+		_disposed = false;
 		Connected = true;
 
 		ClientConnected?.Invoke(this, ConnectionEndpoint);
@@ -75,7 +77,6 @@ public class ChatClient : IChatClient
 			return;
 
 		Dispose();
-		Connected = false;
 
 		ClientDisconnected?.Invoke(this, ConnectionEndpoint!);
 	}
@@ -85,9 +86,8 @@ public class ChatClient : IChatClient
 		if (!Connected)
 			return new Error("Code", "Description"); // TODO
 
-		Result<string> buildResult =
-			await _clientChatMessageBuilder.Build(
-				new ClientChatMessage(DateTime.Now, message));
+		ClientChatMessage clientChatMessage = new(DateTime.Now, message);
+		Result<string> buildResult = await _clientMessageBuilder.Build(clientChatMessage);
 
 		if (buildResult.IsFailure)
 			return buildResult.Error;
@@ -121,7 +121,7 @@ public class ChatClient : IChatClient
 		if (message is null)
 			return new Error("Code", "Description"); // TODO
 
-		Result<ServerChatMessage> parseResult = await _serverChatMessageParser.Parse(message);
+		Result<ServerChatMessage> parseResult = await _serverMessageParser.Parse(message);
 
 		return parseResult.IsSuccess
 			? parseResult
@@ -160,6 +160,9 @@ public class ChatClient : IChatClient
 			_client.Close();
 			_streamReader?.Close();
 			_streamWriter?.Close();
+
+			Connected = false;
+			ConnectionEndpoint = default;
 		}
 
 		_disposed = true;
