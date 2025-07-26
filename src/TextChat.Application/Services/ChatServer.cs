@@ -13,8 +13,8 @@ public class ChatServer : IChatServer
 	private bool _disposed;
 	private readonly ConcurrentDictionary<Guid, ServerClient> _connectedClients = new();
 
-	private readonly IClientChatMessageParser _clientMessageParser;
-	private readonly IServerChatMessageBuilder _serverMessageBuilder;
+	private readonly IChatMessageParser _chatMessageParser;
+	private readonly IChatMessageBuilder _chatMessageBuilder;
 
 	public bool Started { get; private set; }
 
@@ -41,11 +41,8 @@ public class ChatServer : IChatServer
 
 	public event EventHandler<Error>? ErrorBroadcastingClientMessage;
 
-	public ChatServer(
-		IClientChatMessageParser clientMessageParser,
-		IServerChatMessageBuilder serverMessageBuilder) =>
-		(_clientMessageParser, _serverMessageBuilder) =
-		(clientMessageParser, serverMessageBuilder);
+	public ChatServer(IChatMessageParser chatMessageParser, IChatMessageBuilder chatMessageBuilder) =>
+		(_chatMessageParser, _chatMessageBuilder) = (chatMessageParser, chatMessageBuilder);
 
 	public Result Start(string ipAddress, int port)
 	{
@@ -106,7 +103,7 @@ public class ChatServer : IChatServer
 			DateTime.Now,
 			message);
 
-		Result<string> buildResult = await _serverMessageBuilder.Build(serverChatMessage);
+		Result<string> buildResult = await _chatMessageBuilder.BuildServerMessage(serverChatMessage);
 
 		if (buildResult.IsFailure)
 			return buildResult.Error;
@@ -145,7 +142,7 @@ public class ChatServer : IChatServer
 		if (message is null)
 			return new Error("Code", "Description"); // TODO
 
-		Result<ClientChatMessage> parseResult = await _clientMessageParser.Parse(message);
+		Result<ClientChatMessage> parseResult = await _chatMessageParser.ParseClientMessage(message);
 
 		return parseResult.IsSuccess
 			? parseResult

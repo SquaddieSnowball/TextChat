@@ -13,8 +13,8 @@ public class ChatClient : IChatClient
 	private StreamReader? _streamReader;
 	private StreamWriter? _streamWriter;
 
-	private readonly IServerChatMessageParser _serverMessageParser;
-	private readonly IClientChatMessageBuilder _clientMessageBuilder;
+	private readonly IChatMessageParser _chatMessageParser;
+	private readonly IChatMessageBuilder _chatMessageBuilder;
 
 	public bool Connected { get; private set; }
 
@@ -28,11 +28,8 @@ public class ChatClient : IChatClient
 
 	public event EventHandler<Error>? ErrorReceivingMessage;
 
-	public ChatClient(
-		IServerChatMessageParser serverMessageParser,
-		IClientChatMessageBuilder clientMessageBuilder) =>
-		(_serverMessageParser, _clientMessageBuilder) =
-		(serverMessageParser, clientMessageBuilder);
+	public ChatClient(IChatMessageParser chatMessageParser, IChatMessageBuilder chatMessageBuilder) =>
+		(_chatMessageParser, _chatMessageBuilder) = (chatMessageParser, chatMessageBuilder);
 
 	public async Task<Result> Connect(string ipAddress, int port)
 	{
@@ -87,7 +84,7 @@ public class ChatClient : IChatClient
 			return new Error("Code", "Description"); // TODO
 
 		ClientChatMessage clientChatMessage = new(DateTime.Now, message);
-		Result<string> buildResult = await _clientMessageBuilder.Build(clientChatMessage);
+		Result<string> buildResult = await _chatMessageBuilder.BuildClientMessage(clientChatMessage);
 
 		if (buildResult.IsFailure)
 			return buildResult.Error;
@@ -121,7 +118,7 @@ public class ChatClient : IChatClient
 		if (message is null)
 			return new Error("Code", "Description"); // TODO
 
-		Result<ServerChatMessage> parseResult = await _serverMessageParser.Parse(message);
+		Result<ServerChatMessage> parseResult = await _chatMessageParser.ParseServerMessage(message);
 
 		return parseResult.IsSuccess
 			? parseResult
