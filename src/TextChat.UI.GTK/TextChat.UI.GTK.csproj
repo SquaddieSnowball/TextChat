@@ -5,6 +5,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<OutputType>WinExe</OutputType>
+		<SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -16,6 +17,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="GtkSharp" Version="3.24.24.*" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.7" />
 	</ItemGroup>
 
 	<ItemGroup>
