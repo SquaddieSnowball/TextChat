@@ -4,8 +4,70 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TextChat.UI.WPF.Views"
+        xmlns:converters="clr-namespace:TextChat.UI.WPF.Converters"
         mc:Ignorable="d"
-        Title="MainWindow"
-        Height="450"
-        Width="800">
+        Title="Text chat"
+        Height="500"
+        Width="800"
+        MinHeight="500"
+        MinWidth="800"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+    </Window.Resources>
+    <Grid Margin="5">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="150"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <GroupBox Grid.Column="0"
+                  Header="Connection settings">
+            <StackPanel Orientation="Vertical"
+                        Margin="5">
+                <Label>IP address:</Label>
+                <TextBox Text="{Binding IPAddress}"
+                         IsEnabled="{Binding Connected, Converter={StaticResource InverseBooleanConverter}}"
+                         Margin="5"/>
+                <CheckBox IsChecked="{Binding ServerMode}"
+                          IsEnabled="{Binding Connected, Converter={StaticResource InverseBooleanConverter}}"
+                          Margin="5">
+                    Server mode
+                </CheckBox>
+                <Button Content="{Binding Connect}"
+                        Command="{Binding ConnectCommand}"
+                        Margin="5"/>
+            </StackPanel>
+        </GroupBox>
+        <GroupBox Grid.Column="1"
+                  Header="Chat">
+            <Grid Margin="5">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBox Grid.Row="0"
+                         Text="{Binding ChatHistory}"
+                         IsReadOnly="True"
+                         VerticalScrollBarVisibility="Auto"
+                         Padding="5"
+                         Background="LightGray"/>
+                <Grid Grid.Row="1"
+                      Margin="0 10 0 0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0"
+                             Text="{Binding Message}"
+                             IsEnabled="{Binding Connected}"
+                             Margin="0 0 10 0"/>
+                    <Button Grid.Column="1"
+                            Command="{Binding SendCommand}"
+                            IsEnabled="{Binding Connected}">
+                        Send
+                    </Button>
+                </Grid>
+            </Grid>
+        </GroupBox>
+    </Grid>
 </Window>
