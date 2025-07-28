@@ -85,11 +85,9 @@ public class ChatServer : IChatServer
 			return;
 
 		Dispose();
-
-		ServerStopped?.Invoke(this, ServerEndpoint!);
 	}
 
-	public Task<Result> BroadcastMessage(string message) => BroadcastMessage(message);
+	public Task<Result> BroadcastMessage(string message) => BroadcastMessage(message, default);
 
 	private async Task<Result> BroadcastMessage(string message, ServerClient? broadcastingServerClient = default)
 	{
@@ -98,8 +96,8 @@ public class ChatServer : IChatServer
 
 		ServerChatMessage serverChatMessage = new(
 			broadcastingServerClient is not null
-				? broadcastingServerClient.Endpoint.Address
-				: ServerEndpoint!.Address,
+				? broadcastingServerClient.Endpoint.Address.ToString()
+				: ServerEndpoint!.Address.ToString(),
 			DateTime.Now,
 			message);
 
@@ -112,7 +110,7 @@ public class ChatServer : IChatServer
 		{
 			try
 			{
-				await serverClient.StreamWriter.WriteAsync(buildResult.Value);
+				await serverClient.StreamWriter.WriteLineAsync(buildResult.Value);
 				await serverClient.StreamWriter.FlushAsync();
 			}
 			catch (IOException)
@@ -136,11 +134,19 @@ public class ChatServer : IChatServer
 		}
 		catch (IOException)
 		{
+			if (Started)
+				ClientDisconnected?.Invoke(this, serverClient.Endpoint);
+
 			return new Error("Code", "Description"); // TODO
 		}
 
 		if (message is null)
+		{
+			if (Started)
+				ClientDisconnected?.Invoke(this, serverClient.Endpoint);
+
 			return new Error("Code", "Description"); // TODO
+		}
 
 		Result<ClientChatMessage> parseResult = await _chatMessageParser.ParseClientMessage(message);
 
@@ -166,6 +172,10 @@ public class ChatServer : IChatServer
 			{
 				ErrorAcceptingClient?.Invoke(this, new Error("Code", "Description")); // TODO
 
+				return;
+			}
+			catch (NullReferenceException)
+			{
 				return;
 			}
 			finally
@@ -231,6 +241,8 @@ public class ChatServer : IChatServer
 
 		if (disposing)
 		{
+			Started = false;
+
 			_server?.Stop();
 			_server = default;
 
@@ -239,13 +251,12 @@ public class ChatServer : IChatServer
 				serverClient.TcpClient.Close();
 				serverClient.StreamReader.Close();
 				serverClient.StreamWriter.Close();
-
-				ClientDisconnected?.Invoke(this, serverClient.Endpoint);
 			}
 
 			_connectedClients.Clear();
 
-			Started = false;
+			ServerStopped?.Invoke(this, ServerEndpoint!);
+
 			ServerEndpoint = default;
 		}
 

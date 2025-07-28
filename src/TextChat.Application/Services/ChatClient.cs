@@ -8,7 +8,7 @@ namespace TextChat.Application.Services;
 
 public class ChatClient : IChatClient
 {
-	private readonly TcpClient _client = new();
+	private TcpClient? _client;
 	private bool _disposed;
 	private StreamReader? _streamReader;
 	private StreamWriter? _streamWriter;
@@ -40,6 +40,7 @@ public class ChatClient : IChatClient
 		{
 			ConnectionEndpoint = new IPEndPoint(IPAddress.Parse(ipAddress), port);
 
+			_client = new TcpClient();
 			await _client.ConnectAsync(ConnectionEndpoint);
 
 			_streamReader = new StreamReader(_client.GetStream());
@@ -74,8 +75,6 @@ public class ChatClient : IChatClient
 			return;
 
 		Dispose();
-
-		ClientDisconnected?.Invoke(this, ConnectionEndpoint!);
 	}
 
 	public async Task<Result> SendMessage(string message)
@@ -91,7 +90,7 @@ public class ChatClient : IChatClient
 
 		try
 		{
-			await _streamWriter!.WriteAsync(buildResult.Value);
+			await _streamWriter!.WriteLineAsync(buildResult.Value);
 			await _streamWriter.FlushAsync();
 		}
 		catch (IOException)
@@ -112,11 +111,17 @@ public class ChatClient : IChatClient
 		}
 		catch (IOException)
 		{
+			Disconnect();
+
 			return new Error("Code", "Description"); // TODO
 		}
 
 		if (message is null)
+		{
+			Disconnect();
+
 			return new Error("Code", "Description"); // TODO
+		}
 
 		Result<ServerChatMessage> parseResult = await _chatMessageParser.ParseServerMessage(message);
 
@@ -154,11 +159,16 @@ public class ChatClient : IChatClient
 
 		if (disposing)
 		{
-			_client.Close();
+			_client?.Close();
+			_client = default;
+
 			_streamReader?.Close();
 			_streamWriter?.Close();
 
 			Connected = false;
+
+			ClientDisconnected?.Invoke(this, ConnectionEndpoint!);
+
 			ConnectionEndpoint = default;
 		}
 
