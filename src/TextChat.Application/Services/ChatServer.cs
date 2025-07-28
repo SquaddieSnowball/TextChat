@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using TextChat.Application.Errors;
 using TextChat.Application.Services.Abstractions;
 using TextChat.Domain.Entities;
 using TextChat.Domain.Primitives;
@@ -58,15 +59,15 @@ public class ChatServer : IChatServer
 		}
 		catch (FormatException)
 		{
-			return new Error("Code", "Description"); // TODO
+			return ChatErrors.WrongIP;
 		}
 		catch (ArgumentOutOfRangeException)
 		{
-			return new Error("Code", "Description"); // TODO
+			return ChatErrors.WrongPort;
 		}
 		catch (SocketException)
 		{
-			return new Error("Code", "Description"); // TODO
+			return ChatErrors.UnableToStart;
 		}
 
 		_disposed = false;
@@ -92,7 +93,7 @@ public class ChatServer : IChatServer
 	private async Task<Result> BroadcastMessage(string message, ServerClient? broadcastingServerClient = default)
 	{
 		if (!Started)
-			return new Error("Code", "Description"); // TODO
+			return ChatErrors.NotRunning;
 
 		ServerChatMessage serverChatMessage = new(
 			broadcastingServerClient is not null
@@ -115,7 +116,10 @@ public class ChatServer : IChatServer
 			}
 			catch (IOException)
 			{
-				return new Error("Code", "Description"); // TODO
+				RemoveClient(serverClient);
+
+				if (!Started)
+					break;
 			}
 		}
 
@@ -134,25 +138,15 @@ public class ChatServer : IChatServer
 		}
 		catch (IOException)
 		{
-			if (Started)
-				ClientDisconnected?.Invoke(this, serverClient.Endpoint);
-
-			return new Error("Code", "Description"); // TODO
+			return ChatErrors.ClientDisconnected;
 		}
 
 		if (message is null)
-		{
-			if (Started)
-				ClientDisconnected?.Invoke(this, serverClient.Endpoint);
-
-			return new Error("Code", "Description"); // TODO
-		}
+			return ChatErrors.ClientDisconnected;
 
 		Result<ClientChatMessage> parseResult = await _chatMessageParser.ParseClientMessage(message);
 
-		return parseResult.IsSuccess
-			? parseResult
-			: new Error("Code", "Description"); // TODO
+		return parseResult;
 	}
 
 	private void AcceptClient()
@@ -170,7 +164,7 @@ public class ChatServer : IChatServer
 			}
 			catch (SocketException)
 			{
-				ErrorAcceptingClient?.Invoke(this, new Error("Code", "Description")); // TODO
+				ErrorAcceptingClient?.Invoke(this, ChatErrors.CanNotAcceptClient);
 
 				return;
 			}
@@ -217,15 +211,23 @@ public class ChatServer : IChatServer
 			{
 				ErrorReceivingMessage?.Invoke(this, receiveMessageResult.Error);
 
-				serverClient.TcpClient.Close();
-				serverClient.StreamReader.Close();
-				serverClient.StreamWriter.Close();
-
-				_connectedClients.TryRemove(serverClient.Id, out _);
+				RemoveClient(serverClient);
 
 				break;
 			}
 		}
+	}
+
+	private void RemoveClient(ServerClient serverClient)
+	{
+		serverClient.TcpClient.Close();
+		serverClient.StreamReader.Close();
+		serverClient.StreamWriter.Close();
+
+		_connectedClients.TryRemove(serverClient.Id, out _);
+
+		if (Started)
+			ClientDisconnected?.Invoke(this, serverClient.Endpoint);
 	}
 
 	public void Dispose()

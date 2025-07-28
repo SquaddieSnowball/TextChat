@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using TextChat.Application.Errors;
 using TextChat.Application.Services.Abstractions;
 using TextChat.Domain.Entities;
 using TextChat.Domain.Primitives;
@@ -48,15 +49,15 @@ public class ChatClient : IChatClient
 		}
 		catch (FormatException)
 		{
-			return new Error("Code", "Description"); // TODO
+			return ChatErrors.WrongIP;
 		}
 		catch (ArgumentOutOfRangeException)
 		{
-			return new Error("Code", "Description"); // TODO
+			return ChatErrors.WrongPort;
 		}
 		catch (SocketException)
 		{
-			return new Error("Code", "Description"); // TODO
+			return ChatErrors.ServerUnavailable;
 		}
 
 		_disposed = false;
@@ -80,7 +81,7 @@ public class ChatClient : IChatClient
 	public async Task<Result> SendMessage(string message)
 	{
 		if (!Connected)
-			return new Error("Code", "Description"); // TODO
+			return ChatErrors.NotConnected;
 
 		ClientChatMessage clientChatMessage = new(DateTime.Now, message);
 		Result<string> buildResult = await _chatMessageBuilder.BuildClientMessage(clientChatMessage);
@@ -95,7 +96,7 @@ public class ChatClient : IChatClient
 		}
 		catch (IOException)
 		{
-			return new Error("Code", "Description"); // TODO
+			return ChatErrors.Disconnected;
 		}
 
 		return Result.Success();
@@ -113,21 +114,19 @@ public class ChatClient : IChatClient
 		{
 			Disconnect();
 
-			return new Error("Code", "Description"); // TODO
+			return ChatErrors.Disconnected;
 		}
 
 		if (message is null)
 		{
 			Disconnect();
 
-			return new Error("Code", "Description"); // TODO
+			return ChatErrors.Disconnected;
 		}
 
 		Result<ServerChatMessage> parseResult = await _chatMessageParser.ParseServerMessage(message);
 
-		return parseResult.IsSuccess
-			? parseResult
-			: new Error("Code", "Description"); // TODO
+		return parseResult;
 	}
 
 	private void StartReceivingMessages()
