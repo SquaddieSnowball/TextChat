@@ -2,7 +2,7 @@
 
 namespace TextChat.Application.Errors;
 
-public static class ChatErrors
+internal static class ChatErrors
 {
 	public static readonly Error WrongIP = new(
 		nameof(WrongIP),
@@ -37,7 +37,7 @@ public static class ChatErrors
 		"The client has disconnected from the server");
 
 	public static readonly Error CanNotAcceptClient = new(
-		nameof(ClientDisconnected),
+		nameof(CanNotAcceptClient),
 		"Can not accept a client");
 
 	public static readonly Error WrongMessage = new(

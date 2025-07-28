@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net;
+﻿using System.Net;
 using TextChat.Application.Services.Abstractions;
 using TextChat.Domain.Primitives;
 using TextChat.UI.WPF.Commands.Base;
@@ -15,11 +14,12 @@ internal class MainViewModel : ViewModel
 	private readonly IChatServer _chatServer;
 
 	private string _ipAddress = "127.0.0.1";
-	private bool _serverMode = false;
+	private bool _serverMode;
 	private string _connect = "Connect";
-	private bool _connected;
 	private string _chatHistory = string.Empty;
 	private string _message = string.Empty;
+
+	private bool _connected;
 
 	public string IPAddress
 	{
@@ -39,12 +39,6 @@ internal class MainViewModel : ViewModel
 		set => Set(ref _connect, value);
 	}
 
-	public bool Connected
-	{
-		get => _connected;
-		set => Set(ref _connected, value);
-	}
-
 	public string ChatHistory
 	{
 		get => _chatHistory;
@@ -57,6 +51,12 @@ internal class MainViewModel : ViewModel
 		set => Set(ref _message, value);
 	}
 
+	public bool Connected
+	{
+		get => _connected;
+		set => Set(ref _connected, value);
+	}
+
 	public RelayCommand ConnectCommand { get; private set; }
 
 	public RelayCommand SendCommand { get; private set; }
@@ -65,12 +65,6 @@ internal class MainViewModel : ViewModel
 	{
 		(_chatClient, _chatServer) = (chatClient, chatServer);
 
-		CreateCommands();
-	}
-
-	[MemberNotNull(nameof(ConnectCommand), nameof(SendCommand))]
-	private void CreateCommands()
-	{
 		ConnectCommand = new RelayCommand(OnConnectCommandExecute, CanConnectCommandExecute);
 		SendCommand = new RelayCommand(OnSendCommandExecute, CanSendCommandExecute);
 	}

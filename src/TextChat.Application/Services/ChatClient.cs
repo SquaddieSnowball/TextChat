@@ -164,11 +164,10 @@ public class ChatClient : IChatClient
 			_streamReader?.Close();
 			_streamWriter?.Close();
 
-			Connected = false;
-
 			ClientDisconnected?.Invoke(this, ConnectionEndpoint!);
 
 			ConnectionEndpoint = default;
+			Connected = false;
 		}
 
 		_disposed = true;
